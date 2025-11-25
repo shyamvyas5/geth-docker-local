@@ -73,6 +73,23 @@ is_geth_dev_up() {
     done
 }
 
+is_grafana_up() {
+    GRAFANA_POD_NAME=$(kubectl -n "$MONITORING_NAMESPACE" get po | grep grafana | awk '{print $1}')
+    echo "Waiting for pod $GRAFANA_POD_NAME in namespace $MONITORING_NAMESPACE to be Running..."
+
+    while true; do
+        STATUS=$(kubectl get pod "$GRAFANA_POD_NAME" -n "$MONITORING_NAMESPACE" -o jsonpath='{.status.phase}' 2>/dev/null)
+
+        if [ "$STATUS" = "Running" ]; then
+            echo "Grafana pod is Running!"
+            return 0
+        fi
+
+        echo "Current status: $STATUS"
+        sleep 2
+    done
+}
+
 #######################################
 # Monitor block production
 #######################################
@@ -179,6 +196,10 @@ deploy_monitoring() {
 # grafana svc port-forward
 #######################################
 grafana_port_forward() {
+    if ! is_grafana_up; then
+        echo "Grafana pod is not up yet, cannot port-forward."
+        exit 1
+    fi
     echo "Port-forwarding Grafana on http://localhost:8080 ..."
     kubectl -n "${MONITORING_NAMESPACE}" port-forward svc/monitoring-grafana 8080:80
 }
