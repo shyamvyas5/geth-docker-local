@@ -1,0 +1,87 @@
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  enabled: true
+
+prometheusOperator:
+  enabled: true
+
+prometheus:
+  enabled: true
+  prometheusSpec:
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    additionalScrapeConfigs:
+      - job_name: 'geth-dev'
+        metrics_path: '/debug/metrics/prometheus'
+        static_configs:
+          - targets: ['geth-dev-0.geth-dev.geth-dev.svc.cluster.local:6060']
+            labels:
+              instance: 'geth-dev'
+
+      - job_name: 'load-tester'
+        metrics_path: '/metrics'
+        static_configs:
+          - targets: ['load-tester.geth-dev.svc.cluster.local:8000']
+            labels:
+              instance: 'load-tester'
+
+grafana:
+  enabled: true
+  adminPassword: admin
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: standard
+    accessModes:
+      - ReadWriteOnce
+
+  securityContext:
+    runAsUser: 472
+    runAsGroup: 472
+    fsGroup: 472
+
+  initChownData:
+    enabled: false
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "load_tester"
+      folder: /var/lib/grafana/dashboards
+      searchNamespace: geth-dev
+
+  # dashboards:
+  #   default:
+  #     geth-dashboard:
+  #       gnetId: 15750
+  #       revision: 1
+  #       datasource: Prometheus
+
+  # dashboardProviders:
+  #   dashboardproviders.yaml:
+  #     apiVersion: 1
+  #     providers:
+  #     - name: 'default'
+  #       orgId: 1
+  #       folder: ''
+  #       type: file
+  #       disableDeletion: false
+  #       editable: true
+  #       options:
+  #         path: /var/lib/grafana/dashboards/default
+
+  # dashboards:
+  #   default:
+  #   load-tester-dashboard:
+  #     enabled: true
+  #     configMap: load-tester-dashboard
+  #     key: load-tester-dashboard.json

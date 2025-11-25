@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-tester
+  namespace: geth-dev
+  labels:
+    app: load-tester
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    name: metrics
+    targetPort: 8000
+  selector:
+    app: load-tester
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-tester
+  namespace: geth-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-tester
+  template:
+    metadata:
+      labels:
+        app: load-tester
+    spec:
+      containers:
+      - name: load-tester
+        image: local/python-app:v5
+        ports:
+        - containerPort: 8000
+          name: metrics
+        envFrom:
+        - configMapRef:
+            name: load-tester-config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "150m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5

@@ -1,0 +1,109 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: geth-dev
+  namespace: geth-dev
+spec:
+  serviceName: geth-dev
+  replicas: 1
+  selector:
+    matchLabels:
+      app: geth-dev
+  template:
+    metadata:
+      labels:
+        app: geth-dev
+    spec:
+      containers:
+      - name: geth
+        image: ethereum/client-go:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8545
+          name: rpc
+        - containerPort: 6060
+          name: metrics
+        args:
+        - --datadir=/data
+        - --dev
+        - --dev.period=6
+        - --http
+        - --http.addr=0.0.0.0
+        - --http.port=8545
+        - --http.api=eth,net,web3,personal
+        - --http.vhosts=*
+        - --http.corsdomain=*
+        - --metrics
+        - --metrics.addr=0.0.0.0
+        - --metrics.port=6060
+        # - --metrics.expensive
+        volumeMounts:
+        - name: geth-data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "150m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8545
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8545
+          initialDelaySeconds: 10
+          periodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: geth-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: geth-dev-headless
+  namespace: geth-dev
+  labels:
+    app: geth-dev
+spec:
+  ports:
+  - port: 8545
+    name: rpc
+    targetPort: 8545
+  - port: 6060
+    name: metrics
+    targetPort: 6060
+  clusterIP: None  # Headless service for StatefulSet
+  selector:
+    app: geth-dev
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: geth-dev
+  namespace: geth-dev
+  labels:
+    app: geth-dev
+spec:
+  type: ClusterIP  # Change to NodePort or ClusterIP if needed
+  ports:
+  - port: 8545
+    name: rpc
+    targetPort: 8545
+  - port: 6060
+    name: metrics
+    targetPort: 6060
+  selector:
+    app: geth-dev
