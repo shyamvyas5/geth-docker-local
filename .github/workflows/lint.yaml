@@ -1,0 +1,33 @@
+name: Lint Python & YAML
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python lint tools
+        run: pip install flake8
+
+      - name: Lint python file
+        run: flake8 run.py
+
+      - name: Install yamllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint
+
+      - name: Lint only YAML files in k8s folder
+        run: |
+          yamllint $(find k8s -type f \( -name "*.yaml" -o -name "*.yml" \))
