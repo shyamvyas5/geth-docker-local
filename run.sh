@@ -159,6 +159,13 @@ deploy_monitoring() {
         kubectl create ns ${MONITORING_NAMESPACE}
     fi
 
+    echo "adding prometheus-community helm chart repo"
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+    echo "running helm repo update"
+    helm repo update
+
+    echo "installing kube-prometheus-stack using kube-prometheus-stack with version 79.7.1"
     helm upgrade --install monitoring \
         -f ${MONITORING_VALUES_OVERRIDE_FILE} \
         prometheus-community/kube-prometheus-stack \
