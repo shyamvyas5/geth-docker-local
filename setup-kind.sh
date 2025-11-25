@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-CLUSTER_NAME="test2"
+CLUSTER_NAME="test"
 VERSION="v0.30.0"
 
 #######################################
