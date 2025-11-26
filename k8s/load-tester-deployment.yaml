@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: load-tester
-        image: ghcr.io/shyamvyas5/geth-docker-local:2a54ff6-main
+        image: ghcr.io/shyamvyas5/geth-docker-local:a7a4e12-main
         ports:
         - containerPort: 8000
           name: metrics
