@@ -105,7 +105,7 @@ class EthereumLoadTester:
         for i in range(self.config.num_accounts):
             account = Account.create()
             self.accounts.append(account)
-            logger.info(f"Created account {i+1}/{self.config.num_accounts}: {account.address}")
+            logger.info(f"Created account {i + 1}/{self.config.num_accounts}: {account.address}")
 
         accounts_created.set(len(self.accounts))
 
@@ -131,7 +131,7 @@ class EthereumLoadTester:
 
                 if receipt['status'] == 1:
                     balance = self.w3.eth.get_balance(account.address)
-                    logger.info(f"Funded account {i+1}: {account.address} with {self.w3.from_wei(balance, 'ether')} ETH")
+                    logger.info(f"Funded account {i + 1}: {account.address} with {self.w3.from_wei(balance, 'ether')} ETH")
                     current_balance.labels(address=account.address).set(balance)
                 else:
                     logger.error(f"Failed to fund account {account.address}")
