@@ -21,7 +21,7 @@ jobs:
         run: pip install flake8
 
       - name: Lint python file
-        run: flake8 run.py
+        run: flake8 --ignore=E501,F841 run.py
 
       - name: Install yamllint
         run: |

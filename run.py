@@ -33,6 +33,7 @@ gas_price_gwei = Gauge('eth_gas_price_gwei', 'Current gas price in Gwei')
 block_number = Gauge('eth_block_number', 'Current block number')
 connection_status = Gauge('eth_connection_status', 'Connection status (1=connected, 0=disconnected)')
 
+
 @dataclass
 class LoadTestConfig:
     rpc_url: str
@@ -45,6 +46,7 @@ class LoadTestConfig:
     total_batches: int
     metrics_port: int
     fund_amount_ether: float
+
 
 class EthereumLoadTester:
     def __init__(self, config: LoadTestConfig):
@@ -324,6 +326,7 @@ class EthereumLoadTester:
             self.running = False
             logger.info("Load test completed")
 
+
 def load_config_from_env() -> LoadTestConfig:
     """Load configuration from environment variables"""
     return LoadTestConfig(
@@ -338,6 +341,7 @@ def load_config_from_env() -> LoadTestConfig:
         metrics_port=int(os.getenv('METRICS_PORT', '8000')),
         fund_amount_ether=float(os.getenv('FUND_AMOUNT_ETHER', '1.0'))
     )
+
 
 def main():
     # Load config from environment variables
@@ -362,6 +366,7 @@ def main():
     # Create and run load tester
     tester = EthereumLoadTester(config)
     tester.run()
+
 
 if __name__ == '__main__':
     main()
