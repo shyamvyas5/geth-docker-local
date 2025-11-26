@@ -33,7 +33,6 @@ gas_price_gwei = Gauge('eth_gas_price_gwei', 'Current gas price in Gwei')
 block_number = Gauge('eth_block_number', 'Current block number')
 connection_status = Gauge('eth_connection_status', 'Connection status (1=connected, 0=disconnected)')
 
-
 @dataclass
 class LoadTestConfig:
     rpc_url: str
@@ -46,7 +45,8 @@ class LoadTestConfig:
     total_batches: int
     metrics_port: int
     fund_amount_ether: float
-
+    specific_account_address: str
+    specific_account_fund_amount: float
 
 class EthereumLoadTester:
     def __init__(self, config: LoadTestConfig):
@@ -98,6 +98,39 @@ class EthereumLoadTester:
             connection_status.set(0)  # Disconnected
             return False
 
+    def fund_specific_account(self):
+        """Fund a specific account from the dev account before creating test accounts"""
+        if not self.config.specific_account_address or self.config.specific_account_address == "":
+            logger.info("No specific account address provided, skipping specific account funding")
+            return
+
+        logger.info(f"Funding specific account: {self.config.specific_account_address}")
+
+        # Get dev account (unlocked in dev mode)
+        dev_account = self.w3.eth.accounts[0]
+
+        try:
+            # Send funds to specific account
+            tx_hash = self.w3.eth.send_transaction({
+                'from': dev_account,
+                'to': self.config.specific_account_address,
+                'value': self.w3.to_wei(self.config.specific_account_fund_amount, 'ether'),
+                'gas': 21000,
+            })
+
+            # Wait for transaction
+            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+
+            if receipt['status'] == 1:
+                balance = self.w3.eth.get_balance(self.config.specific_account_address)
+                logger.info(f"Successfully funded specific account: {self.config.specific_account_address}")
+                logger.info(f"  Balance: {self.w3.from_wei(balance, 'ether')} ETH")
+            else:
+                logger.error(f"Failed to fund specific account: {self.config.specific_account_address}")
+
+        except Exception as e:
+            logger.error(f"Error funding specific account {self.config.specific_account_address}: {e}")
+
     def create_accounts(self):
         """Create test accounts"""
         logger.info(f"Creating {self.config.num_accounts} accounts...")
@@ -105,7 +138,7 @@ class EthereumLoadTester:
         for i in range(self.config.num_accounts):
             account = Account.create()
             self.accounts.append(account)
-            logger.info(f"Created account {i + 1}/{self.config.num_accounts}: {account.address}")
+            logger.info(f"Created account {i+1}/{self.config.num_accounts}: {account.address}")
 
         accounts_created.set(len(self.accounts))
 
@@ -131,7 +164,7 @@ class EthereumLoadTester:
 
                 if receipt['status'] == 1:
                     balance = self.w3.eth.get_balance(account.address)
-                    logger.info(f"Funded account {i + 1}: {account.address} with {self.w3.from_wei(balance, 'ether')} ETH")
+                    logger.info(f"Funded account {i+1}: {account.address} with {self.w3.from_wei(balance, 'ether')} ETH")
                     current_balance.labels(address=account.address).set(balance)
                 else:
                     logger.error(f"Failed to fund account {account.address}")
@@ -294,6 +327,7 @@ class EthereumLoadTester:
         self.running = True
 
         # Create and fund accounts
+        self.fund_specific_account()
         self.create_accounts()
         self.fund_accounts()
 
@@ -326,7 +360,6 @@ class EthereumLoadTester:
             self.running = False
             logger.info("Load test completed")
 
-
 def load_config_from_env() -> LoadTestConfig:
     """Load configuration from environment variables"""
     return LoadTestConfig(
@@ -339,9 +372,10 @@ def load_config_from_env() -> LoadTestConfig:
         continuous=os.getenv('CONTINUOUS', 'true').lower() == 'true',
         total_batches=int(os.getenv('TOTAL_BATCHES', '100')),
         metrics_port=int(os.getenv('METRICS_PORT', '8000')),
-        fund_amount_ether=float(os.getenv('FUND_AMOUNT_ETHER', '1.0'))
+        fund_amount_ether=float(os.getenv('FUND_AMOUNT_ETHER', '1.0')),
+        specific_account_address=os.getenv('SPECIFIC_ACCOUNT_ADDRESS', ''),
+        specific_account_fund_amount=float(os.getenv('SPECIFIC_ACCOUNT_FUND_AMOUNT', '10.0'))
     )
-
 
 def main():
     # Load config from environment variables
@@ -358,6 +392,9 @@ def main():
     logger.info(f"  Total Batches: {config.total_batches}")
     logger.info(f"  Metrics Port: {config.metrics_port}")
     logger.info(f"  Fund Amount: {config.fund_amount_ether} ETH")
+    if config.specific_account_address:
+        logger.info(f"  Specific Account: {config.specific_account_address}")
+        logger.info(f"  Specific Account Fund Amount: {config.specific_account_fund_amount} ETH")
 
     # Start metrics server
     logger.info(f"Starting metrics server on port {config.metrics_port}")
@@ -366,7 +403,6 @@ def main():
     # Create and run load tester
     tester = EthereumLoadTester(config)
     tester.run()
-
 
 if __name__ == '__main__':
     main()
